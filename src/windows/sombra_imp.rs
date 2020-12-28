@@ -96,6 +96,20 @@ mod tests {
     use std::io::prelude::*;
     use std::net::TcpStream;
 
+    fn echo_check(ip_port: &str, msg: &[u8]) -> std::io::Result<()> {
+        let mut stream = TcpStream::connect(ip_port)?;
+        stream.write(msg)?;
+        let mut buffer = [0u8; 512];
+        stream.read(&mut buffer);
+        let mut buffer = buffer.to_vec();
+        buffer.retain(|&x| x != 0);
+        if buffer != msg.to_vec() {
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "Not match"))
+        } else {
+            Ok(())
+        }
+    }
+
     #[test]
     fn build() {
         let path = "executables/tcp_echo.exe";
@@ -108,41 +122,12 @@ mod tests {
     fn spawn_simple() {
         let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
         assert_eq!(s.create(), Ok(()));
-        let stream = TcpStream::connect("127.0.0.1:30222");
         let msg_to_echo = b"sombra30222";
-
-        match stream {
-            Ok(mut stream) => {
-                if let Ok(_) = stream.write(msg_to_echo) {
-                    println!("Write ok");
-                    let mut buffer = [0u8; 512];
-                    match stream.read(&mut buffer) {
-                        Ok(n) => {
-                            let mut buffer = buffer.to_vec();
-                            buffer.retain(|&x| x != 0);
-                            if buffer != msg_to_echo.to_vec() {
-                                let e = s.delete();
-                                println!("delete result: {:?}", e);
-                            }
-                            assert_eq!(buffer, msg_to_echo.to_vec());
-                        },
-                        Err(e) => {
-                            let e2 = s.delete();
-                            panic!(format!("tcp stream read error: {:?}, {:?}", e, e2));
-                        }
-                    }
-                } else {
-                    let e = s.delete();
-                    panic!(format!("tcp stream write error: {:?}", e));
-                }
-            },
-            Err(e) => {
-                let e2 = s.delete();
-                panic!(format!("tcp stream error: {:?}, {:?}", e, e2));
-            }
+        let res = echo_check("127.0.0.1:30222", msg_to_echo);
+        assert_eq!(s.delete(), Ok(()));
+        if let Err(e) = res {
+            panic!(format!("{:?}", e));
         }
-
-        assert_eq!(Ok(()), s.delete());
     }
 
     #[test]
