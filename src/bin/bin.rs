@@ -8,14 +8,11 @@ use sombra::Sombra;
 struct CLIArgs {
     #[structopt(short, long)]
     remove: bool,
-    #[structopt(short, long)]
-    autoreload: bool,
 }
 
 //  sombra ser.exe [FLAGS] [OPTIONS]
 //  [FLAGS]
 //      remove
-//      autoreload
 //
 
 fn main() {

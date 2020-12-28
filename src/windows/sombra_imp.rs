@@ -8,14 +8,6 @@ use std::path::PathBuf;
 pub struct SombraWindows {
     process_path: PathBuf,
     process_name: String,
-    auto_reload: bool,
-}
-
-impl SombraWindows {
-    pub fn with_autoreload(mut self) -> Self {
-        self.auto_reload = true;
-        self
-    }
 }
 
 impl std::convert::From<windows_service::Error> for SombraError {
@@ -33,7 +25,6 @@ impl Sombra for SombraWindows {
         SombraWindows {
             process_path: path,
             process_name: name.to_string(),
-            auto_reload: false,
         }
     }
 
@@ -114,8 +105,7 @@ mod tests {
     fn spawn_simple() {
         let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
         assert_eq!(s.create(), Ok(()));
-        let msg_to_echo = b"sombra30222";
-        let res = echo_check("127.0.0.1:30222", msg_to_echo);
+        let res = echo_check("127.0.0.1:30222", b"sombra30222");
         assert_eq!(s.delete(), Ok(()));
         if let Err(e) = res {
             panic!(format!("{:?}", e));
@@ -123,22 +113,65 @@ mod tests {
     }
 
     #[test]
-    fn spawn_twice() {
+    fn spawn_twice_same_name() {
+        let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
+        assert_eq!(s.create(), Ok(()));
+        match echo_check("127.0.0.1:30222", b"sombra30222") {
+            Ok(_) => {
+                let s2 = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
+                assert_ne!(s2.create(), Ok(()));
+                assert_eq!(s.delete(), Ok(()));
+            },
+            Err(e) => {
+                assert_eq!(s.delete(), Ok(()));
+                panic!(format!("{:?}", e));
+            }
+        }
+    }
+
+    #[test]
+    fn spawn_twice_other_name() {
         unimplemented!()
     }
 
     #[test]
     fn spawn_once_delete_twice() {
-        unimplemented!()
+        let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
+        assert_eq!(s.create(), Ok(()));
+        match echo_check("127.0.0.1:30222", b"sombra30222") {
+            Ok(_) => {
+                assert_eq!(s.delete(), Ok(()));
+                assert_ne!(s.delete(), Ok(()));
+            },
+            Err(e) => {
+                assert_eq!(s.delete(), Ok(()));
+                panic!(format!("{:?}", e));
+            }
+        }
     }
 
     #[test]
-    fn spawn_buggy_without_auto_reload() {
-        unimplemented!()
-    }
-
-    #[test]
-    fn spawn_buggy_with_auto_reload() {
-        unimplemented!()
+    fn spawn_bug_and_correct() {
+        let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
+        assert_eq!(s.create(), Ok(()));
+        match echo_check("127.0.0.1:30222", b"bug") {
+            Ok(_) => {
+                assert_eq!(s.delete(), Ok(()));
+                assert_eq!(s.create(), Ok(()));
+                match echo_check("127.0.0.1:30222", b"sombra30222") {
+                    Ok(_) => {
+                        assert_eq!(s.delete(), Ok(()));
+                    },
+                    Err(e) => {
+                        assert_eq!(s.delete(), Ok(()));
+                        panic!(format!("{:?}", e));
+                    }
+                }
+            },
+            Err(e) => {
+                assert_eq!(s.delete(), Ok(()));
+                panic!(format!("{:?}", e));
+            }
+        }
     }
 }
