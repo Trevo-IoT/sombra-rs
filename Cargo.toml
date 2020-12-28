@@ -11,6 +11,7 @@ structopt = "0.3.21"
 windows-service = "0.3.1"
 dunce = "1.0.1"
 colored = "2"
+whoami = "0.1.0"
 
 [lib]
 name = "sombra"
