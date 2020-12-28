@@ -27,12 +27,12 @@ impl std::convert::From<windows_service::Error> for SombraError {
 }
 
 impl Sombra for SombraWindows {
-    fn build(process_path: &str) -> Self {
-        let error_msg = format!("Cannot find {} (pre-dunce)", process_path);
-        let process_path_ = dunce::canonicalize(process_path).expect(&error_msg);
+    fn build(name: &str, path: &str) -> Self {
+        let path = dunce::canonicalize(path)
+            .expect(&format!("Cannot find {}", path));
         SombraWindows {
-            process_path: process_path_.clone(),
-            process_name: process_path_.file_stem().expect(&error_msg).to_str().unwrap().to_string(),
+            process_path: path,
+            process_name: name.to_string(),
             auto_reload: false,
         }
     }
@@ -46,13 +46,13 @@ impl Sombra for SombraWindows {
         let service_binary_path = dunce::canonicalize(sombra_win_service)
             .expect(&format!("Cannot find {}", sombra_win_service));
         let service_info = ServiceInfo {
-            name: OsString::from(&self.process_name),
-            display_name: OsString::from(&self.process_name),
+            name: OsString::from(self.process_name.clone()),
+            display_name: OsString::from(self.process_name.clone()),
             service_type: ServiceType::OWN_PROCESS,
             start_type: ServiceStartType::OnDemand,
             error_control: ServiceErrorControl::Normal,
             executable_path: PathBuf::from(service_binary_path),
-            launch_arguments: vec![OsString::from(&self.process_name), OsString::from(&self.process_path)],
+            launch_arguments: vec![],
             dependencies: vec![],
             account_name: None, // run as System
             account_password: None,
@@ -63,8 +63,7 @@ impl Sombra for SombraWindows {
         let service_access = ServiceAccess::START;
         let service = service_manager.open_service(&self.process_name,
                                                    service_access)?;
-        // let args = [OsString::from(&self.process_name).as_os_str(), OsString::from(&self.process_path).as_os_str()];
-        let args: [&OsStr; 0] = [];
+        let args = [OsStr::new(&self.process_path)];
         service.start(&args)?;
 
         Ok(())
@@ -84,7 +83,6 @@ impl Sombra for SombraWindows {
             std::thread::sleep(Duration::from_secs(1))
         }
 
-        //TODO - service.delete only mark to be delete
         service.delete()?;
 
         Ok(())
@@ -100,16 +98,15 @@ mod tests {
 
     #[test]
     fn build() {
-        let file_path = dunce::canonicalize("executables/tcp_echo.exe").unwrap();
-        let s = SombraWindows::build(file_path.as_os_str().to_str().unwrap());
-        assert_eq!(s.process_path.to_str().unwrap(), file_path.as_os_str());
-        assert_eq!(s.process_name, "tcp_echo")
+        let path = "executables/tcp_echo.exe";
+        let s = SombraWindows::build("tcp_echo", path);
+        assert_eq!(s.process_path, dunce::canonicalize(path).unwrap());
+        assert_eq!(s.process_name, "tcp_echo");
     }
 
     #[test]
     fn spawn_simple() {
-        //109: O pipe foi finalizado
-        let s = SombraWindows::build("executables/tcp_echo.exe");
+        let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
         assert_eq!(s.create(), Ok(()));
         let stream = TcpStream::connect("127.0.0.1:30222");
         let msg_to_echo = b"sombra30222";

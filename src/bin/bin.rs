@@ -22,5 +22,5 @@ fn main() {
     let args = CLIArgs::from_args();
     println!("{:#?}", args);
 
-    let _s = sombra::build("executables/tcp_echo.exe");
+    let _s = sombra::build("tcp_echo", "executables/tcp_echo.exe");
 }

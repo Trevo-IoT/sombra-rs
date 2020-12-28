@@ -9,17 +9,17 @@ pub struct SombraError {
 }
 
 pub trait Sombra {
-    fn build(process_path: &str) -> Self;
+    fn build(name: &str, path: &str) -> Self;
     fn create(&self) -> Result<(), SombraError>;
     fn delete(&self) -> Result<(), SombraError>;
 }
 
 #[cfg(target_os = "windows")]
-pub fn build(process_path: &str) -> windows::sombra_imp::SombraWindows {
-    windows::sombra_imp::SombraWindows::build(process_path)
+pub fn build(name: &str, path: &str) -> windows::sombra_imp::SombraWindows {
+    windows::sombra_imp::SombraWindows::build(name, path)
 }
 
 #[cfg(target_os = "linux")]
-pub fn build_(process_path: &str) -> linux::sombra_imp::SombraLinux {
-    linux::sombra_imp::SombraLinux::build(process_path)
+pub fn build_(name: &str, path: &str) -> linux::sombra_imp::SombraLinux {
+    linux::sombra_imp::SombraLinux::build(name, path)
 }
