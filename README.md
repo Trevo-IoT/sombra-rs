@@ -4,12 +4,13 @@ A library to create and manage background services across multiple platforms
 ## Goals
 - One Interface, many platforms
 - Library (Rust) and Binary
-- Minimum interference on native backgroud services
+- no-panic
+- Minimum interference on native service managers
 
 ## Platforms
-- [x] Windows 10
-- [ ] Linux
-- [ ] MacOS
+- ✅ Windows 10
+- ✅ Linux
+- ❌ MacOS
 
 ## Windows 10 Settings
 A special binary (`sombra-windows-service.exe`) is required to run `sombra.exe` on windows platform. 
