@@ -33,9 +33,13 @@ impl Sombra for SombraWindows {
             ServiceManagerAccess::CREATE_SERVICE;
         let service_manager = ServiceManager::local_computer(None::<&str>,
                                                              manager_access)?;
-        let sombra_win_service = "executables/sombra-windows-service.exe";
-        let service_binary_path = dunce::canonicalize(sombra_win_service)
-            .expect(&format!("Cannot find {}", sombra_win_service));
+        if std::env::var("SOMBRA_WINDOWS_SERVICE_PATH").is_err() {
+            std::env::set_var("SOMBRA_WINDOWS_SERVICE_PATH",
+                              "executables/sombra-windows-service.exe");
+        }
+        let sombra_win_service = std::env::var("SOMBRA_WINDOWS_SERVICE_PATH").unwrap();
+        let service_binary_path = dunce::canonicalize(&sombra_win_service)
+            .expect(&format!("Cannot find {}", &sombra_win_service));
         let service_info = ServiceInfo {
             name: OsString::from(self.process_name.clone()),
             display_name: OsString::from(self.process_name.clone()),
