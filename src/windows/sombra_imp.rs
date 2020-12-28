@@ -80,7 +80,7 @@ impl Sombra for SombraWindows {
         let service_status = service.query_status()?;
         if service_status.current_state != ServiceState::Stopped {
             service.stop()?;
-            std::thread::sleep(Duration::from_secs(1))
+            std::thread::sleep(Duration::from_millis(100))
         }
 
         service.delete()?;
