@@ -111,14 +111,6 @@ mod tests {
     }
 
     #[test]
-    fn build() {
-        let path = "executables/tcp_echo.exe";
-        let s = SombraWindows::build("tcp_echo", path);
-        assert_eq!(s.process_path, dunce::canonicalize(path).unwrap());
-        assert_eq!(s.process_name, "tcp_echo");
-    }
-
-    #[test]
     fn spawn_simple() {
         let s = SombraWindows::build("tcp_echo", "executables/tcp_echo.exe");
         assert_eq!(s.create(), Ok(()));
