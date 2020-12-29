@@ -28,17 +28,17 @@ impl From<Utf8Error> for SombraError {
 }
 
 pub trait Sombra {
-    fn build(name: &str, path: &str) -> Self;
+    fn build(name: &str, path: &str, args: Vec<String>) -> Self;
     fn create(&self) -> Result<(), SombraError>;
     fn delete(&self) -> Result<(), SombraError>;
 }
 
 #[cfg(target_os = "windows")]
-pub fn build(name: &str, path: &str) -> windows::sombra_imp::SombraWindows {
-    windows::sombra_imp::SombraWindows::build(name, path)
+pub fn build(name: &str, path: &str, args: Vec<String>) -> windows::sombra_imp::SombraWindows {
+    windows::sombra_imp::SombraWindows::build(name, path, args)
 }
 
 #[cfg(target_os = "linux")]
-pub fn build(name: &str, path: &str) -> linux::sombra_imp::SombraLinux {
-    linux::sombra_imp::SombraLinux::build(name, path)
+pub fn build(name: &str, path: &str, args: Vec<String>) -> linux::sombra_imp::SombraLinux {
+    linux::sombra_imp::SombraLinux::build(name, path, args)
 }

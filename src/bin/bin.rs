@@ -1,16 +1,20 @@
 use structopt::StructOpt;
 use sombra::{Sombra, SombraError};
 use colored::*;
+use structopt::clap::AppSettings;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sombra")]
 enum CLIArgs {
     /// Create a service and start it
+    #[structopt(setting = AppSettings::AllowLeadingHyphen)]
     Create {
         /// Name of service
         name: String,
         /// Path of service executable
         path: String,
+        /// Arguments of target process
+        args: Vec<String>,
     },
     /// Delete a service from system
     Delete {
@@ -23,12 +27,13 @@ fn main() -> Result<(), SombraError> {
     let args = CLIArgs::from_args();
 
     match args {
-        CLIArgs::Create {name, path} => {
-            sombra::build(&name, &path).create()?;
+        CLIArgs::Create {name, path, mut args } => {
+            args.retain(|x| x != "");
+            sombra::build(&name, &path, args).create()?;
             println!("[{}] Service {} created with success", "OK".green(), name);
         },
         CLIArgs::Delete {name} => {
-            sombra::build(&name, ".").delete()?;
+            sombra::build(&name, ".", vec![]).delete()?;
             println!("[{}] Service {} deleted with success", "OK".green(), name);
         }
     }
