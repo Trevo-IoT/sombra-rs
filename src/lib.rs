@@ -1,5 +1,5 @@
-pub mod result;
-pub mod error;
+mod result;
+mod error;
 
 pub use result::Result;
 pub use error::Error;

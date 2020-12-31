@@ -23,20 +23,27 @@ enum CLIArgs {
     },
 }
 
-fn main() -> sombra::Result<()> {
-    let args = CLIArgs::from_args();
-
-    match args {
+fn cli_handler(args: CLIArgs) -> sombra::Result<String> {
+    let success_msg = match args {
         CLIArgs::Create {name, path, mut args } => {
             args.retain(|x| x != "");
             sombra::build(&name, &path, args).create()?;
-            println!("[{}] Service {} created with success", "OK".green(), name);
+            format!("Service {} created with success", name)
         },
         CLIArgs::Delete {name} => {
             sombra::build(&name, ".", vec![]).delete()?;
-            println!("[{}] Service {} deleted with success", "OK".green(), name);
+            format!("Service {} deleted with success", name)
         }
-    }
+    };
 
-    Ok(())
+    Ok(success_msg)
+}
+
+fn main() {
+    let args = CLIArgs::from_args();
+
+    match cli_handler(args) {
+        Ok(success_msg) => println!("[{}] {}", "OK".green(), success_msg),
+        Err(e) => println!("[{}] {}", "ERR".red(), e.to_string()),
+    }
 }
