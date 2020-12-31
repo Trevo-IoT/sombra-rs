@@ -1,7 +1,10 @@
-use crate::{Sombra, SombraError};
+use crate::Sombra;
 use std::ffi::{OsString, OsStr};
-use windows_service::{service::{ServiceAccess, ServiceState, ServiceErrorControl, ServiceInfo,
-                                ServiceStartType, ServiceType}, service_manager::{ServiceManager, ServiceManagerAccess}, Error};
+use windows_service::{
+    service::{ServiceAccess, ServiceState, ServiceErrorControl, ServiceInfo,
+              ServiceStartType, ServiceType},
+    service_manager::{ServiceManager, ServiceManagerAccess}
+};
 use std::time::Duration;
 use std::path::PathBuf;
 
@@ -9,14 +12,6 @@ pub struct SombraWindows {
     process_path: PathBuf,
     process_name: String,
     process_args: Vec<String>,
-}
-
-impl std::convert::From<windows_service::Error> for SombraError {
-    fn from(e: Error) -> Self {
-        SombraError {
-            description: format!("windows_service error: {:?}", e)
-        }
-    }
 }
 
 impl Sombra for SombraWindows {
@@ -30,7 +25,7 @@ impl Sombra for SombraWindows {
         }
     }
 
-    fn create(&self) -> Result<(), SombraError> {
+    fn create(&self) -> crate::Result<()> {
         let manager_access = ServiceManagerAccess::CONNECT |
             ServiceManagerAccess::CREATE_SERVICE;
         let service_manager = ServiceManager::local_computer(None::<&str>,
@@ -69,7 +64,7 @@ impl Sombra for SombraWindows {
         Ok(())
     }
 
-    fn delete(&self) -> Result<(), SombraError> {
+    fn delete(&self) -> crate::Result<()> {
         let manager_access = ServiceManagerAccess::CONNECT;
         let service_manager = ServiceManager::local_computer(None::<&str>,
                                                              manager_access)?;

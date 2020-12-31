@@ -1,7 +1,7 @@
-use structopt::StructOpt;
-use sombra::{Sombra, SombraError};
-use colored::*;
 use structopt::clap::AppSettings;
+use structopt::StructOpt;
+use sombra::Sombra;
+use colored::*;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sombra")]
@@ -23,7 +23,7 @@ enum CLIArgs {
     },
 }
 
-fn main() -> Result<(), SombraError> {
+fn main() -> sombra::Result<()> {
     let args = CLIArgs::from_args();
 
     match args {
