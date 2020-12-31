@@ -2,7 +2,7 @@ mod result;
 mod error;
 
 pub use result::Result;
-pub use error::Error;
+pub use error::{Error, ErrorKind};
 
 #[cfg(target_os = "windows")]
 mod windows;

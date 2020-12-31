@@ -14,9 +14,16 @@ pub struct SombraWindows {
     process_args: Vec<String>,
 }
 
+macro_rules! sombra_error {
+    ($kind:ident, $content:expr) => {
+        |e| crate::Error::new(crate::ErrorKind::$kind, e.to_string()).content($content)
+    };
+}
+
 impl Sombra for SombraWindows {
     fn build(name: &str, path: &str, args: Vec<String>) -> crate::Result<Self> {
-        let path = dunce::canonicalize(path)?;
+        let path = dunce::canonicalize(path)
+            .map_err(sombra_error!(Io, path.to_string()))?;
 
         Ok(SombraWindows {
             process_path: path,
@@ -35,8 +42,9 @@ impl Sombra for SombraWindows {
                               "executables/sombra-windows-service.exe");
         }
         let sombra_win_service = std::env::var("SOMBRA_WINDOWS_SERVICE_PATH")?;
+        let service_binary_path = dunce::canonicalize(&sombra_win_service)
+            .map_err(sombra_error!(Io, sombra_win_service.clone()))?;
 
-        let service_binary_path = dunce::canonicalize(&sombra_win_service)?;
         let service_info = ServiceInfo {
             name: OsString::from(self.process_name.clone()),
             display_name: OsString::from(self.process_name.clone()),
@@ -49,7 +57,8 @@ impl Sombra for SombraWindows {
             account_name: None, // run as System
             account_password: None,
         };
-        let service = service_manager.create_service(&service_info, ServiceAccess::CHANGE_CONFIG)?;
+        let service = service_manager.create_service(&service_info,
+                                                     ServiceAccess::CHANGE_CONFIG)?;
         service.set_description(format!("Sombra Service Wrapper on {}", self.process_name))?;
 
         let service_access = ServiceAccess::START;

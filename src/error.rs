@@ -1,37 +1,58 @@
 #[derive(Debug, PartialEq)]
-pub enum Error {
-    IO(String),
-    Utf8(String),
-    WindowsService(String),
-    EnvVar(String),
+pub struct Error {
+    kind: ErrorKind,
+    desc: String,
+    content: Option<String>,
+}
+
+impl Error {
+    pub fn new(kind: ErrorKind, desc: String) -> Self {
+        Error {
+            kind,
+            desc,
+            content: None,
+        }
+    }
+
+    pub fn content(mut self, content: String) -> Self {
+        self.content = Some(content);
+        self
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ErrorKind {
+    Other,
+    Io,
+    Utf8,
+    WindowsService,
 }
 
 impl ToString for Error {
     fn to_string(&self) -> String {
-        match self {
-            Error::IO(s) => format!("[IO] {}", s.to_string()),
-            Error::Utf8(s) => format!("[Utf8] {}", s.to_string()),
-            Error::WindowsService(s) => format!("[WindowsService] {}", s.to_string()),
-            Error::EnvVar(s) => format!("[EnvVar] {}", s.to_string()),
+        if let Some(content) = &self.content {
+            format!("<{:?}> {}: {}", self.kind, content, self.desc)
+        } else {
+            format!("<{:?}> {}", self.kind, self.desc)
         }
     }
 }
 
 impl From<std::env::VarError> for Error {
     fn from(e: std::env::VarError) -> Self {
-        Error::EnvVar(e.to_string())
+        Error::new(ErrorKind::Other, e.to_string())
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Error::IO(e.to_string())
+        Error::new(ErrorKind::Other, e.to_string())
     }
 }
 
 impl From<std::str::Utf8Error> for Error {
     fn from(e: std::str::Utf8Error) -> Self {
-        Error::Utf8(e.to_string())
+        Error::new(ErrorKind::Other, e.to_string())
     }
 }
 
@@ -39,8 +60,9 @@ impl From<std::str::Utf8Error> for Error {
 impl std::convert::From<windows_service::Error> for Error {
     fn from(e: windows_service::Error) -> Self {
         match e {
-            windows_service::Error::Winapi(err) => Error::WindowsService(err.to_string()),
-            _ => Error::WindowsService(e.to_string())
+            windows_service::Error::Winapi(err) => Error::new(ErrorKind::Other,
+                                                              err.to_string()),
+            _ => Error::new(ErrorKind::Other, e.to_string())
         }
     }
 }
