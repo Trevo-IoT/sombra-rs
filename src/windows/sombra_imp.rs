@@ -34,7 +34,14 @@ impl Sombra for SombraWindows {
             std::env::set_var("SOMBRA_WINDOWS_SERVICE_PATH",
                               "executables/sombra-windows-service.exe");
         }
-        let sombra_win_service = std::env::var("SOMBRA_WINDOWS_SERVICE_PATH").unwrap();
+        let sombra_win_service = match std::env::var("SOMBRA_WINDOWS_SERVICE_PATH") {
+            Ok(o) => o,
+            Err(_) => {
+                return Err(crate::Error::IO(
+                    "Environment variable SOMBRA_WINDOWS_SERVICE_PATH not found".to_string()))
+            }
+        };
+
         let service_binary_path = dunce::canonicalize(&sombra_win_service)
             .expect(&format!("Cannot find {}", &sombra_win_service));
         let service_info = ServiceInfo {
