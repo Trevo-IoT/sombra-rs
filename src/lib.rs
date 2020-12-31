@@ -10,17 +10,18 @@ mod windows;
 mod linux;
 
 pub trait Sombra {
-    fn build(name: &str, path: &str, args: Vec<String>) -> Self;
+    fn build(name: &str, path: &str, args: Vec<String>) -> Result<Self>
+        where Self: std::marker::Sized;
     fn create(&self) -> Result<()>;
     fn delete(&self) -> Result<()>;
 }
 
 #[cfg(target_os = "windows")]
-pub fn build(name: &str, path: &str, args: Vec<String>) -> windows::sombra_imp::SombraWindows {
+pub fn build(name: &str, path: &str, args: Vec<String>) -> Result<windows::sombra_imp::SombraWindows> {
     windows::sombra_imp::SombraWindows::build(name, path, args)
 }
 
 #[cfg(target_os = "linux")]
-pub fn build(name: &str, path: &str, args: Vec<String>) -> linux::sombra_imp::SombraLinux {
+pub fn build(name: &str, path: &str, args: Vec<String>) -> Result<linux::sombra_imp::SombraLinux> {
     linux::sombra_imp::SombraLinux::build(name, path, args)
 }

@@ -15,14 +15,14 @@ pub struct SombraWindows {
 }
 
 impl Sombra for SombraWindows {
-    fn build(name: &str, path: &str, args: Vec<String>) -> Self {
-        let path = dunce::canonicalize(path)
-            .expect(&format!("Cannot find {}", path));
-        SombraWindows {
+    fn build(name: &str, path: &str, args: Vec<String>) -> crate::Result<Self> {
+        let path = dunce::canonicalize(path)?;
+
+        Ok(SombraWindows {
             process_path: path,
             process_name: name.to_string(),
             process_args: args,
-        }
+        })
     }
 
     fn create(&self) -> crate::Result<()> {
@@ -34,16 +34,9 @@ impl Sombra for SombraWindows {
             std::env::set_var("SOMBRA_WINDOWS_SERVICE_PATH",
                               "executables/sombra-windows-service.exe");
         }
-        let sombra_win_service = match std::env::var("SOMBRA_WINDOWS_SERVICE_PATH") {
-            Ok(o) => o,
-            Err(_) => {
-                return Err(crate::Error::IO(
-                    "Environment variable SOMBRA_WINDOWS_SERVICE_PATH not found".to_string()))
-            }
-        };
+        let sombra_win_service = std::env::var("SOMBRA_WINDOWS_SERVICE_PATH")?;
 
-        let service_binary_path = dunce::canonicalize(&sombra_win_service)
-            .expect(&format!("Cannot find {}", &sombra_win_service));
+        let service_binary_path = dunce::canonicalize(&sombra_win_service)?;
         let service_info = ServiceInfo {
             name: OsString::from(self.process_name.clone()),
             display_name: OsString::from(self.process_name.clone()),
@@ -114,8 +107,11 @@ mod tests {
 
     #[test]
     fn spawn_simple() {
-        let s = SombraWindows::build("tcp_echo",
-                                     "executables/tcp_echo.exe", vec![]);
+        let s = match SombraWindows::build("tcp_echo",
+                                     "executables/tcp_echo.exe", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         let res = echo_check("127.0.0.1:30222", b"sombra30222");
         assert_eq!(s.delete(), Ok(()));
@@ -126,13 +122,19 @@ mod tests {
 
     #[test]
     fn spawn_twice_same_name() {
-        let s = SombraWindows::build("tcp_echo",
-                                     "executables/tcp_echo.exe", vec![]);
+        let s = match SombraWindows::build("tcp_echo",
+                                           "executables/tcp_echo.exe", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
-                let s2 = SombraWindows::build("tcp_echo",
-                                              "executables/tcp_echo.exe", vec![]);
+                let s2 = match SombraWindows::build("tcp_echo",
+                                                   "executables/tcp_echo.exe", vec![]) {
+                    Ok(s2) => s2,
+                    Err(e) => panic!(e.to_string()),
+                };
                 assert_ne!(s2.create(), Ok(()));
                 assert_eq!(s.delete(), Ok(()));
             },
@@ -145,16 +147,22 @@ mod tests {
 
     #[test]
     fn spawn_twice_other_name() {
-        let s = SombraWindows::build("tcp_echo30222",
-                                     "executables/tcp_echo.exe",
-                                     vec!["-p".to_string(), "30222".to_string()]);
+        let s = match SombraWindows::build("tcp_echo30222",
+                                           "executables/tcp_echo.exe",
+                                           vec!["-p".to_string(), "30222".to_string()]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
 
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
-                let s2 = SombraWindows::build("tcp_echo30223",
-                                              "executables/tcp_echo.exe",
-                                              vec!["-p".to_string(), "30223".to_string()]);
+                let s2 = match SombraWindows::build("tcp_echo30223",
+                                                   "executables/tcp_echo.exe",
+                                                   vec!["-p".to_string(), "30223".to_string()]) {
+                    Ok(s) => s,
+                    Err(e) => panic!(e.to_string()),
+                };
                 assert_eq!(s2.create(), Ok(()));
                 match echo_check("127.0.0.1:30223", b"sombra30223") {
                     Ok(_) => {
@@ -177,9 +185,12 @@ mod tests {
 
     #[test]
     fn spawn_with_args() {
-        let s = SombraWindows::build("tcp_echo",
-                                     "executables/tcp_echo.exe",
-                                     vec!["-p".to_string(), "30223".to_string()]);
+        let s = match SombraWindows::build("tcp_echo",
+                                           "executables/tcp_echo.exe",
+                                           vec!["-p".to_string(), "30223".to_string()]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         let res = echo_check("127.0.0.1:30223", b"sombra30223");
         assert_eq!(s.delete(), Ok(()));
@@ -190,8 +201,11 @@ mod tests {
 
     #[test]
     fn spawn_once_delete_twice() {
-        let s = SombraWindows::build("tcp_echo",
-                                     "executables/tcp_echo.exe", vec![]);
+        let s = match SombraWindows::build("tcp_echo",
+                                           "executables/tcp_echo.exe", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
@@ -207,8 +221,11 @@ mod tests {
 
     #[test]
     fn spawn_bug_and_correct() {
-        let s = SombraWindows::build("tcp_echo",
-                                     "executables/tcp_echo.exe", vec![]);
+        let s = match SombraWindows::build("tcp_echo",
+                                           "executables/tcp_echo.exe", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         match echo_check("127.0.0.1:30222", b"bug") {
             Ok(_) => {

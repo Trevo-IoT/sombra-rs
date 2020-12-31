@@ -27,11 +27,11 @@ fn cli_handler(args: CLIArgs) -> sombra::Result<String> {
     let success_msg = match args {
         CLIArgs::Create {name, path, mut args } => {
             args.retain(|x| x != "");
-            sombra::build(&name, &path, args).create()?;
+            sombra::build(&name, &path, args)?.create()?;
             format!("Service {} created with success", name)
         },
         CLIArgs::Delete {name} => {
-            sombra::build(&name, ".", vec![]).delete()?;
+            sombra::build(&name, ".", vec![])?.delete()?;
             format!("Service {} deleted with success", name)
         }
     };
