@@ -40,19 +40,19 @@ impl ToString for Error {
 
 impl From<std::env::VarError> for Error {
     fn from(e: std::env::VarError) -> Self {
-        Error::new(ErrorKind::Other, e.to_string())
+        Error::new(ErrorKind::Io, e.to_string())
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Error::new(ErrorKind::Other, e.to_string())
+        Error::new(ErrorKind::Io, e.to_string())
     }
 }
 
 impl From<std::str::Utf8Error> for Error {
     fn from(e: std::str::Utf8Error) -> Self {
-        Error::new(ErrorKind::Other, e.to_string())
+        Error::new(ErrorKind::Utf8, e.to_string())
     }
 }
 
@@ -60,9 +60,9 @@ impl From<std::str::Utf8Error> for Error {
 impl std::convert::From<windows_service::Error> for Error {
     fn from(e: windows_service::Error) -> Self {
         match e {
-            windows_service::Error::Winapi(err) => Error::new(ErrorKind::Other,
+            windows_service::Error::Winapi(err) => Error::new(ErrorKind::WindowsService,
                                                               err.to_string()),
-            _ => Error::new(ErrorKind::Other, e.to_string())
+            _ => Error::new(ErrorKind::WindowsService, e.to_string())
         }
     }
 }
