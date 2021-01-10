@@ -1,7 +1,8 @@
-use crate::{Sombra, SombraError};
+use crate::Sombra;
 use std::path::PathBuf;
 use std::io::Write;
 use crate::linux::systemctl::Systemctl;
+use crate::error::ErrorKind::Other;
 
 pub struct SombraLinux {
     process_path: PathBuf,
@@ -11,13 +12,19 @@ pub struct SombraLinux {
 }
 
 impl SombraLinux {
-    fn service_file_content(name: &str, path: &PathBuf, args: &Vec<String>) -> String {
-        let exec_start = if args.is_empty() {
-            path.to_str().unwrap().to_string()
-        } else {
-            format!("{} {}", path.to_str().unwrap(), args.join(" "))
+    fn service_file_content(name: &str, path: &PathBuf, args: &Vec<String>) -> crate::Result<String> {
+        let path_str = match path.to_str() {
+            Some(path_str) => path_str.to_string(),
+            None => return Err(crate::Error::new(crate::ErrorKind::Io,
+                                                 "Cannot decode path".to_string()))
         };
-        format!("[Unit]\n\
+
+        let exec_start = if args.is_empty() {
+            path_str
+        } else {
+            format!("{} {}", path_str, args.join(" "))
+        };
+        Ok(format!("[Unit]\n\
                 Description={} service\n\
                 After=network.target\n\
                 StartLimitIntervalSec=0\n\
@@ -31,19 +38,16 @@ impl SombraLinux {
                 WantedBy=multi-user.target",
                 name,
                 whoami::username(),
-                exec_start)
+                exec_start))
     }
 
-    fn is_root() -> Result<(), SombraError> {
+    fn is_root() -> crate::Result<()> {
         match std::env::var("USER") {
-            Err(e) => Err(SombraError {
-                description: e.to_string()
-            }),
+            Err(e) => Err(crate::Error::new(Other, e.to_string())),
             Ok(name) => {
                 if name != "root" {
-                    Err(SombraError {
-                        description: "Without root privileges.".to_string()
-                    })
+                    Err(crate::Error::new(Other,
+                                          "Without root privileges.".to_string()))
                 } else {
                     Ok(())
                 }
@@ -52,39 +56,45 @@ impl SombraLinux {
     }
 }
 
+macro_rules! sombra_error {
+    ($kind:ident, $content:expr) => {
+        |e| crate::Error::new(crate::ErrorKind::$kind, e.to_string()).content($content)
+    };
+}
+
 impl Sombra for SombraLinux {
-    fn build(name: &str, path: &str, args: Vec<String>) -> Self {
-        let path = dunce::canonicalize(path).expect(&format!("Cannot find {}", path));
-        SombraLinux {
+    fn build(name: &str, path: &str, args: Vec<String>) -> crate::Result<Self> {
+        let path = dunce::canonicalize(path)
+            .map_err(sombra_error!(Io, path.to_string()))?;
+
+        Ok(SombraLinux {
             process_path: path,
             process_name: name.to_string(),
             process_args: args,
             sysctl: Systemctl::new(name)
-        }
+        })
     }
 
-    fn create(&self) -> Result<(), SombraError> {
+    fn create(&self) -> crate::Result<()> {
         SombraLinux::is_root()?;
 
         let path = std::path::PathBuf::from(
             format!("/etc/systemd/system/{}.service", self.process_name));
         if path.exists() {
-            return Err(SombraError {
-                description: format!("Service {} already exist",
-                                     self.process_name)
-            });
+            return Err(crate::Error::new(crate::ErrorKind::Io, format!("Service {} already exist",
+                                     self.process_name)));
         } else {
             let mut file = std::fs::File::create(&path)?;
             let buffer = SombraLinux::service_file_content(&self.process_name,
                                                            &self.process_path,
-                                                           &self.process_args);
+                                                           &self.process_args)?;
             file.write_all(&mut buffer.as_bytes())?;
         }
 
         self.sysctl.start()
     }
 
-    fn delete(&self) -> Result<(), SombraError> {
+    fn delete(&self) -> crate::Result<()> {
         let _ = self.sysctl.stop();
         self.sysctl.disable()?;
         std::fs::remove_file(format!("/etc/systemd/system/{}.service", self.process_name))?;
@@ -119,7 +129,10 @@ mod tests {
 
     #[test]
     fn spawn_simple() {
-        let s = SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]);
+        let s = match SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         let res = echo_check("127.0.0.1:30222", b"sombra30222");
         assert_eq!(s.delete(), Ok(()));
@@ -130,11 +143,18 @@ mod tests {
 
     #[test]
     fn spawn_twice_same_name() {
-        let s = SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]);
+        let s = match SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
+
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
-                let s2 = SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]);
+                let s2 = match SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]) {
+                    Ok(s2) => s2,
+                    Err(e) => panic!(e.to_string()),
+                };
                 assert_ne!(s2.create(), Ok(()));
                 assert_eq!(s.delete(), Ok(()));
             },
@@ -147,16 +167,22 @@ mod tests {
 
     #[test]
     fn spawn_twice_other_name() {
-        let s = SombraLinux::build("tcp_echo30222",
+        let s = match SombraLinux::build("tcp_echo30222",
                                      "executables/tcp_echo",
-                                     vec!["-p".to_string(), "30222".to_string()]);
+                                     vec!["-p".to_string(), "30222".to_string()]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
 
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
-                let s2 = SombraLinux::build("tcp_echo30223",
+                let s2 = match SombraLinux::build("tcp_echo30223",
                                               "executables/tcp_echo",
-                                              vec!["-p".to_string(), "30223".to_string()]);
+                                              vec!["-p".to_string(), "30223".to_string()]) {
+                    Ok(s) => s,
+                    Err(e) => panic!(e.to_string()),
+                };
                 assert_eq!(s2.create(), Ok(()));
                 match echo_check("127.0.0.1:30223", b"sombra30223") {
                     Ok(_) => {
@@ -179,9 +205,12 @@ mod tests {
 
     #[test]
     fn spawn_with_args() {
-        let s = SombraLinux::build("tcp_echo",
+        let s = match SombraLinux::build("tcp_echo",
                                      "executables/tcp_echo",
-                                     vec!["-p".to_string(), "30223".to_string()]);
+                                     vec!["-p".to_string(), "30223".to_string()]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         let res = echo_check("127.0.0.1:30223", b"sombra30223");
         assert_eq!(s.delete(), Ok(()));
@@ -192,7 +221,10 @@ mod tests {
 
     #[test]
     fn spawn_once_delete_twice() {
-        let s = SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]);
+        let s = match SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         match echo_check("127.0.0.1:30222", b"sombra30222") {
             Ok(_) => {
@@ -208,7 +240,10 @@ mod tests {
 
     #[test]
     fn spawn_bug_and_correct() {
-        let s = SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]);
+        let s = match SombraLinux::build("tcp_echo", "executables/tcp_echo", vec![]) {
+            Ok(s) => s,
+            Err(e) => panic!(e.to_string()),
+        };
         assert_eq!(s.create(), Ok(()));
         match echo_check("127.0.0.1:30222", b"bug") {
             Ok(_) => {
@@ -231,3 +266,6 @@ mod tests {
         }
     }
 }
+
+// Run test on linux as sudo
+// sudo -E cargo test -- --test-threads 1
