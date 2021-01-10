@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq)]
 enum CommandOutput {
     Stdout(String),
@@ -53,6 +52,41 @@ fn linux_error_flow() -> std::io::Result<()>  {
 
     let service_not_find = run_cmd("./target/release/sombra", vec!["delete", "tcp_echo2"])?;
     assert_eq!(service_not_find, stdout!("[ERR] <Io> No such file or directory (os error 2)\n"));
+
+    Ok(())
+}
+
+#[test]
+#[cfg(target_os = "windows")]
+fn windows_normal_flow() -> std::io::Result<()> {
+    let res = run_cmd(".\\target\\release\\sombra.exe", vec!["create", "tcp_echo",
+                                                      "executables\\tcp_echo.exe"])?;
+    assert_eq!(res, stdout!("[OK] Service tcp_echo created with success\n"));
+
+    let res = run_cmd(".\\target\\release\\sombra.exe", vec!["delete",
+                                                      "tcp_echo"])?;
+    assert_eq!(res, stdout!("[OK] Service tcp_echo deleted with success\n"));
+
+    Ok(())
+}
+
+#[test]
+#[cfg(target_os = "windows")]
+fn windows_error_flow() -> std::io::Result<()>  {
+    let res = run_cmd(".\\target\\release\\sombra.exe", vec!["create", "tcp_echo", "executables\\tcp_echo.exe"])?;
+    assert_eq!(res, stdout!("[OK] Service tcp_echo created with success\n"));
+
+    let already_exist = run_cmd(".\\target\\release\\sombra.exe", vec!["create", "tcp_echo", "executables\\tcp_echo.exe"])?;
+    assert_eq!(already_exist, stdout!("[ERR] <WindowsService> O serviço especificado já existe. (os error 1073)\n"));
+
+    let file_not_found = run_cmd(".\\target\\release\\sombra.exe", vec!["create", "tcp_echo2", "executables\\tcp_echos.exe"])?;
+    assert_eq!(file_not_found, stdout!("[ERR] <Io> executables\\tcp_echos.exe: O sistema não pode encontrar o arquivo especificado. (os error 2)\n"));
+
+    let res = run_cmd(".\\target\\release\\sombra.exe", vec!["delete", "tcp_echo"])?;
+    assert_eq!(res, stdout!("[OK] Service tcp_echo deleted with success\n"));
+
+    let service_not_find = run_cmd(".\\target\\release\\sombra.exe", vec!["delete", "tcp_echo2"])?;
+    assert_eq!(service_not_find, stdout!("[ERR] <WindowsService> O serviço especificado não existe como serviço instalado. (os error 1060)\n"));
 
     Ok(())
 }
