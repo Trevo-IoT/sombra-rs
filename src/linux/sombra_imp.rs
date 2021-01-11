@@ -91,7 +91,12 @@ impl Sombra for SombraLinux {
             file.write_all(&mut buffer.as_bytes())?;
         }
 
-        self.sysctl.start()
+        self.sysctl.start()?;
+
+        // Need a delay after creation on linux version
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        Ok(())
     }
 
     fn delete(&self) -> crate::Result<()> {

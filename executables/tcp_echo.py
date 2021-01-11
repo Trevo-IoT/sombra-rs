@@ -8,6 +8,7 @@ HOST = '127.0.0.1'
 PORT = 30222
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((HOST, PORT))
     s.listen()
     conn, addr = s.accept()
@@ -18,3 +19,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if not data:
                 break
             conn.send(data)
+    conn.close()

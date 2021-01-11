@@ -11,10 +11,10 @@ fn main() -> sombra::Result<()> {
         "C:\\Program Files\\Python37\\python.exe"
     } else {
         // Put your Python interpreter path here! (Linux)
-        "python3"
+        "/usr/bin/python3"
     };
     let script_abs_path = dunce::canonicalize(
-        PathBuf::from("executables\\tcp_echo.py")).unwrap();
+        PathBuf::from("executables/tcp_echo.py")).unwrap();
     // Buffer to handle incoming TCP Server response
     let mut buffer = [0u8; 512];
     // Message to send to Background TCP Server
