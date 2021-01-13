@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="#visao-geral">Visão Geral</a> •
+  <a href="#visão-geral">Visão Geral</a> •
   <a href="#como-usar">Como Usar</a> •
   <a href="#plataformas">Plataformas</a> •
   <a href="#objetivos-do-projeto">Objetivos do Projeto</a><br>
