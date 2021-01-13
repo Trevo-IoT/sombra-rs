@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="#overview">Overview</a> •
   <a href="#how-to-use">How to Use</a> •
   <a href="#platforms">Platforms</a> •
   <a href="#project-goals">Project Goals</a><br>
